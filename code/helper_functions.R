@@ -1,5 +1,8 @@
 
 remove.background <- function(obs, going.up.threshold, amp.threshold, gap.time){
+  # Removes background from concentration time series
+  # obs: matrix with columns representing the different CMS sensors and
+  #      rows representing the time steps
   
   # Skip sensors that have only NA values
   to.use <- which(apply(obs, 2, function(X) !all(is.na(X))))
@@ -115,6 +118,7 @@ remove.background <- function(obs, going.up.threshold, amp.threshold, gap.time){
 
 
 perform.event.detection <- function(max.obs, gap.time, length.threshold){
+  # Creates the naive emission durations that do not account for CMS non-detect times
   
   # Create data frame with time steps and event mask
   spikes <- data.frame(time = times, events = max.obs > 0)
@@ -192,7 +196,7 @@ perform.event.detection <- function(max.obs, gap.time, length.threshold){
 
 
 perform.localization <- function(spikes, obs, sims){
-  
+  # Estimates emission source for each naive event
   
   # Matrix to hold alignment metric for each event and potential source
   metrics <- matrix(NA, nrow = n.ints, ncol = n.s)
@@ -275,7 +279,7 @@ perform.localization <- function(spikes, obs, sims){
 
 
 perform.quantification <- function(spikes, obs, sims, loc.est.all.events, print.report = F){
-  
+  # Estimates emission rate for each naive event
   
   # Vectors to hold localization and quantification results
   all.q.vals <- vector(mode = "list", length = n.ints)
@@ -399,7 +403,8 @@ perform.quantification <- function(spikes, obs, sims, loc.est.all.events, print.
 
 
 scale.sims <- function(sims){
-  
+  # Scales simulated concentrations by the estimated emission rate of the nearest 
+  # naive event
   
   for (t in 1:n.ints){
     
