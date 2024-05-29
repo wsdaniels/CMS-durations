@@ -406,10 +406,13 @@ scale.sims <- function(sims){
   # Scales simulated concentrations by the estimated emission rate of the nearest 
   # naive event
   
+  # Loop through naive events
   for (t in 1:n.ints){
     
+    # Get index of the forward simulations corresponding to the localization estimate
     sim.ind <- which(names(sims) == loc.est.all.events[t])
     
+    # Get end time of previous event
     if (t > 1){
       previous.event.times <- na.omit(spikes$time[spikes$events == event.nums[t-1]])
       previous.event.end <- previous.event.times[length(previous.event.times)]
@@ -417,6 +420,7 @@ scale.sims <- function(sims){
       previous.event.end <- spikes$time[1]
     }
     
+    # Get start time of following event
     if (t < n.ints){
       next.event.times <- na.omit(spikes$time[spikes$events == event.nums[t+1]])
       next.event.start <- next.event.times[1]
@@ -424,23 +428,30 @@ scale.sims <- function(sims){
       next.event.start <- spikes$time[length(spikes$time)]
     }
     
+    # Get time interval of this event
     this.int <- range(spikes$time[spikes$events == event.nums[t]], na.rm = T)
     
+    # Get times halfway between previous event end and this event start, 
+    # and between this event end and following event start
     start.halfway.time <- difftime(this.int[1], previous.event.end, units = "hours")/2
     end.halfway.time   <- difftime(next.event.start, this.int[2], units = "hours")/2
     
+    # Expand time interval of this event by the halfway times
     this.int <- interval(this.int[1] - start.halfway.time, this.int[2] + end.halfway.time)
     
+    # Mask in times for this event
     time.mask <- times %within% this.int
     
+    # Get rate estimate for this event
     this.q <- rate.est.all.events[t] / 3.6
     
+    # If rate estimate for this event in not available, use mean of all rate estimates for this source
     if (is.na(this.q)){
       this.loc.est <- loc.est.all.events[t]
-      
       this.q <- mean(rate.est.all.events[loc.est.all.events == this.loc.est], na.rm = T)
     }
     
+    # Scale simulations during the time interval for this event by the rate estimate
     sims[[sim.ind]][time.mask, ] <- sims[[sim.ind]][time.mask, ] * this.q
   }
   
@@ -450,25 +461,28 @@ scale.sims <- function(sims){
 
 
 create.info.mask <- function(sims, gap.time = 0, length.threshold = 15){
+  # Determines which time periods have information from the CMS sensors and 
+  # which do not.
   
-  
+  # Initialize variables to hold information mask
   info.list <- vector(mode = "list", length = length(sims))
   names(info.list) <- names(sims)
   
+  # Loop through potential emission sources
   for (i in 1:length(sims)){
     
+    # Get foward simulation for source i
     this.sim <- sims[[i]]
     
-    # bgr.sim <- remove.background(this.sim,
-    #                              going.up.threshold = 0.25, amp.threshold = 0.75,
-    #                              gap.time = 30)
+    # Filter out small spikes from simulations less than 0.75 kg/hr
     bgr.sim <- remove.background(this.sim,
                                  going.up.threshold = 0.25, amp.threshold = 0.75,
                                  gap.time = gap.time)
     
+    # Take minute-by-minute maximum across CMS sensors
     max.bgr.sim <- apply(bgr.sim, 1, max, na.rm = T)
     
-    # info.list[[i]] <- perform.event.detection(max.bgr.sim, gap.time = 30, length.threshold = 15)
+    # Cluster spikes using event detection algorithm to create periods of information
     info.list[[i]] <- perform.event.detection(max.bgr.sim, gap.time = gap.time, length.threshold = length.threshold)
     
   }
@@ -481,78 +495,107 @@ create.info.mask <- function(sims, gap.time = 0, length.threshold = 15){
 
 
 get.combine.info <- function(spikes, info.list, tz){
+  # Figure out which naive events have non-zero probability of being combined with their neighbors
   
-  
+  # Initialize variables
   start.bounds <- event.starts <- end.bounds <- event.ends <- 
     combine.start <- combine.end <- vector(length = n.ints)
   
   # Loop through events
   for (t in 1:n.ints){
     
+    # Mask in this event 
     this.mask <- seq(min(which(spikes$events == event.nums[t])),
                      max(which(spikes$events == event.nums[t])))
     
+    # Get information mask for estimated emission source for event t
     info.mask <- info.list[[which(names(info.list) == loc.est.all.events[t])]]
     
+    # Get start and end times for this event
     event.start <- this.mask[1]
     event.end <- this.mask[length(this.mask)]
     
-    buffer.time <- 10
+    # Add a buffer to the beginning and end of this event
+    # This makes it so very small periods of information (<10 min) 
+    # do not "block" start and end time sampling from large periods of no information
+    buffer.time <- 10 # [minutes]
     
+    # Use the buffer if there are any periods of no information within the buffer time 
+    # from the event
     use.start.buffer <- any(is.na(info.mask$events)[seq(max(1, this.mask[1]-1-buffer.time), 
                                                         this.mask[1]-1)])
     use.end.buffer <- any(is.na(info.mask$events)[seq(this.mask[length(this.mask)]+1,
                                                       min(nrow(spikes), this.mask[length(this.mask)]+1+buffer.time))])
     
+    # Get time steps of the event, including buffer if applicable
     to.remove <- sort(unique(c(this.mask-buffer.time*use.start.buffer, this.mask, this.mask+buffer.time*use.end.buffer)))
     
+    # Filtering if event is at very beginning or end of experiment time range
     to.remove <- to.remove[to.remove > 0]
     to.remove <- to.remove[to.remove < (nrow(spikes)+1)]
     
+    # Get times in which we have information, excluding the times of the event 
+    # and buffer
     tmp <- info.mask$events
     tmp[to.remove] <- NA
     tmp <- which(!is.na(tmp))
     
+    # Find last time of information to be used as the "start bound", or the 
+    # earliest possible time that the event might have started
     start.diff <- event.start - tmp 
     start.diff <- ifelse(start.diff < 0, NA, start.diff)
     start.bound <- spikes$time[tmp[which.min(start.diff)]] + minutes(1)
     
+    # Find first time of information to be used as the "end bound", or the 
+    # latest possible time that the event might have ended
     end.diff <- tmp - event.end 
     end.diff <- ifelse(end.diff < 0, NA, end.diff)
     end.bound <- spikes$time[tmp[which.min(end.diff)]] - minutes(1)
     
+    # Error handling if event is near the end of the time series
     if (length(end.bound) == 0){
       end.bound <- spikes$time[length(spikes$time)]
     }
     
+    # Error handling if event is near the beginning of the time series
     if (length(start.bound) == 0){
       start.bound <- spikes$time[1]
     }
     
+    # Get times of previous event and move the start bound if it overlaps with
+    # the previous event
     if (t > 1){
       previous.event.times <- na.omit(spikes$time[spikes$events == event.nums[t-1]])
       previous.event.end <- previous.event.times[length(previous.event.times)]
       start.bound <- max(previous.event.end, start.bound)
     }
     
+    # Get times of following event and move the end bound if it overlaps with
+    # the following event
     if (t < n.ints){
       next.event.times <- na.omit(spikes$time[spikes$events == event.nums[t+1]])
       next.event.start <- next.event.times[1]
       end.bound <- min(next.event.start, end.bound)
     }
     
+    # Save data
     start.bounds[t] <- start.bound
     end.bounds[t] <- end.bound
     event.starts[t] <- spikes$time[this.mask][1]
     event.ends[t] <- spikes$time[this.mask][length(this.mask)]
     
-    
+    # If the event is not the first event, check if it can be combined with the previous event
     if (t > 1){
       
+      # Get previous event times
       previous.event.times <- spikes$time[seq(min(which(spikes$events == event.nums[t-1])),
                                               max(which(spikes$events == event.nums[t-1])))]
+      
+      # Initialize check variable to false
       length.check <- F
       
+      # If previous event is within "buffer time" from the period of no information surrounding the 
+      # current event, then the "length check" is passed
       if (any(previous.event.times >= start.bound)){ 
         length.check <- T 
       } else {
@@ -562,18 +605,26 @@ get.combine.info <- function(spikes, info.list, tz){
         }
       }
       
+      # Check if previous event has the same localization estimate
       same.loc.est <- loc.est.all.events[t] == loc.est.all.events[t-1]
       
+      # Combine if both length check and localization check are passed
       if (length.check & same.loc.est){ combine.start[t] <- T }
     }
     
     
+    # If the event is not the last event, check if it can be combined with the following event
     if (t < n.ints){
       
+      # Get next event times
       next.event.times <- spikes$time[seq(min(which(spikes$events == event.nums[t+1])),
                                           max(which(spikes$events == event.nums[t+1])))]
+      
+      # Initialize check variable to false
       length.check <- F
       
+      # If following event is within "buffer time" from the period of no information surrounding the 
+      # current event, then the "length check" is passed
       if (any(next.event.times <= end.bound)){ 
         length.check <- T 
       } else {
@@ -583,18 +634,22 @@ get.combine.info <- function(spikes, info.list, tz){
         }
       }
       
+      # Check if following event has the same localization estimate
       same.loc.est <- loc.est.all.events[t] == loc.est.all.events[t+1]
       
+      # Combine if both length check and localization check are passed
       if (length.check & same.loc.est){ combine.end[t] <- T }
     }
     
   } # end loop over events
   
+  # Convert to date time objects
   event.starts <- as_datetime(event.starts, tz = tz)
   event.ends <-   as_datetime(event.ends,   tz = tz)
   start.bounds <- as_datetime(start.bounds, tz = tz)
   end.bounds <-   as_datetime(end.bounds,   tz = tz)
   
+  # Save everything
   out <- list(event.starts = event.starts,
               event.ends = event.ends,
               start.bounds = start.bounds,
@@ -612,10 +667,12 @@ get.combine.info <- function(spikes, info.list, tz){
 
 
 get.durations <- function(spikes, info.list, tz){
+  # Get distribution of possible durations for a given naive event
   
-  
+  # Get information about which events can be combined with their neighbors
   out <- get.combine.info(spikes = spikes, info.list = info.list, tz = tz)
   
+  # Parse out info
   event.starts <- out$event.starts
   event.ends <- out$event.ends
   start.bounds <- out$start.bounds
@@ -623,123 +680,159 @@ get.durations <- function(spikes, info.list, tz){
   combine.start <- out$combine.start
   combine.end <- out$combine.end
   
-  
+  # Number of start and end time samples
   n.samples <- 100000
   
+  # Initialize variable to hold all sampled durations
   all.durations <- vector(mode = "list", length = n.ints)
   names(all.durations) <- loc.est.all.events
   
+  # Initialize variable to hold sampled durations by source
   est.durations <- vector(mode = "list", length = n.s)
   names(est.durations) <- source.names
   n.est <- sapply(est.durations, function(X) length(X)/n.samples)
   
+  # Initialize variable to indicate which events had "hard stops".
+  # These are the events that started and stopped fully within periods of information
   hard.stops <- vector(length = n.ints)
   
+  # Get 5/95th percentile range of emission rate estimates. Will be used to normalize
+  # probability of recombining event.
   rate.range <- quantile(rate.est.all.events, probs = c(0.05, 0.95), na.rm = T)
   rate.range <- rate.range[2] - rate.range[1]
   
+  # Loop through events
   for (t in 1:n.ints){
     
+    # See how many preceding and following events can be recombined with event t
     max.to.combine.start <- which(!(seq(1,n.ints) %in% (t-which(combine.end))))[1]-1
     max.to.combine.end   <- which(!(seq(1,n.ints) %in% (which(combine.start)-t)))[1]-1
     
+    # Create sequence of possible recombine options
     start.combine.options <- seq(0, max.to.combine.start)
     end.combine.options   <- seq(0, max.to.combine.end)
     
+    # Initialize variables to hold sampled start and end times from each even that can be recombined
+    # These will be combined later, weighted by their probability of being recombined
     start.time.sample <- vector(mode = "list", length = length(start.combine.options))
     end.time.sample <- vector(mode = "list", length = length(end.combine.options))
     
+    # Sample from all event start times that could be combined with event t
     for (i in 1:length(start.combine.options)){
       possible.start.times <- seq(start.bounds[t-start.combine.options[i]], event.starts[t-start.combine.options[i]], by = "1 min")
       start.time.sample[[i]] <- sample(possible.start.times, n.samples, replace = T)
     }
     
+    # sample from all event end times that could be combined with event t
     for (i in 1:length(end.combine.options)){
       possible.end.times <- seq(event.ends[t+end.combine.options[i]], end.bounds[t+end.combine.options[i]], by = "1 min")
       end.time.sample[[i]] <- sample(possible.end.times, n.samples, replace = T)
     }
     
+    # Indicate if event started and stopped fully within periods of information
     if (length(unique(unlist(start.time.sample))) == 1 & length(unique(unlist(end.time.sample))) == 1){
       hard.stops[t] <- T
     }
     
+    # Number of recombine options
     n.start.options <- length(start.combine.options)
     n.end.options <- length(end.combine.options)
     
+    # Vector to hold a "similarity score" that defines how similar event t's emission 
+    # rate estimate is to the emission rates of all possible events that could be recombined 
+    # with event t
     similarity.score <- vector(length = n.start.options)
     
+    # Similarity score calculated as described in paper
     for (i in 1:n.start.options){
       jump <- start.combine.options[i]
       similarity.score[i] <- 1 - abs(rate.est.all.events[t-jump] - rate.est.all.events[t]) / rate.range
     }
     
+    # Similarity score could be less than zero because we normalize using the 5/95
+    # range rather than min/max range, so set negative values to zero
     similarity.score <- ifelse(similarity.score < 0, 0, similarity.score)
     
+    # If a rate estimate of a given event is NA, assign equal probability of combining and
+    # not combining
     similarity.score[is.na(similarity.score)] <- 0.5
     
+    # Compute cumulative probability of combining given event with event t, based on the 
+    # probability of combining the intermediate events
     if (n.start.options > 1){
-      
       relative.probs <- cumprod(similarity.score)
-      
       for (i in seq(length(relative.probs)-1, 1)){
         relative.probs[i] <- relative.probs[i] - sum(relative.probs[seq(i+1,length(relative.probs))])
       }
-      
     } else {
       relative.probs <- 1
     }
     
+    # Number of samples to take from each event, based on probability of recombining
     start.sample.nums <- round(n.samples * relative.probs)
     all.starts <- c()
     
+    # Loop through events that can be recombined, sample start times
     for (i in 1:n.start.options){
       all.starts <- c(all.starts, sample(start.time.sample[[i]], start.sample.nums[i], replace = T))
     }
     
+    # Return number of samples to n.samples
     all.starts <- sample(all.starts, n.samples, replace = T)
     
+    # Vector to hold a "similarity score" that defines how similar event t's emission 
+    # rate estimate is to the emission rates of all possible events that could be recombined 
+    # with event t
     similarity.score <- vector(length = n.end.options)
     
+    # Similarity score calculated as described in paper
     for (i in 1:n.end.options){
       jump <- end.combine.options[i]
       similarity.score[i] <- 1 - abs(rate.est.all.events[t+jump] - rate.est.all.events[t]) / rate.range
     }
     
+    # Similarity score could be less than zero because we normalize using the 5/95
+    # range rather than min/max range, so set negative values to zero
     similarity.score <- ifelse(similarity.score < 0, 0, similarity.score)
     
+    # If a rate estimate of a given event is NA, assign equal probability of combining and
+    # not combining
     similarity.score[is.na(similarity.score)] <- 0.5
     
+    # Compute cumulative probability of combining given event with event t, based on the 
+    # probability of combining the intermediate events
     if (n.end.options > 1){
-      
       relative.probs <- cumprod(similarity.score)
-      
       for (i in seq(length(relative.probs)-1, 1)){
         relative.probs[i] <- relative.probs[i] - sum(relative.probs[seq(i+1,length(relative.probs))])
       }
-      
     } else {
       relative.probs <- 1
     }
     
-    
+    # Number of samples to take from each event, based on probability of recombining
     end.sample.nums <- round(n.samples * relative.probs)
     all.ends <- c()
     
+    # Loop through events that can be recombined, sample end times
     for (i in 1:n.end.options){
       all.ends <- c(all.ends, sample(end.time.sample[[i]], end.sample.nums[i], replace = T))
     }
     
+    # Return number of samples to n.samples
     all.ends <- sample(all.ends, n.samples, replace = T)
     
+    # Compute all possible durations by taking difference of sampled start and end times
     all.durations[[t]] <- as.numeric(difftime(all.ends, all.starts, units = "hour"))
     
-    
+    # Save durations by source
     sim.ind <- which(source.names == loc.est.all.events[t])
     est.durations[[sim.ind]] <- c(est.durations[[sim.ind]], all.durations[[t]])
     
     
   } # end loop over events
   
+  # Save everything
   out <- list(all.durations = all.durations, 
               est.durations = est.durations,
               event.starts = event.starts,
@@ -760,9 +853,12 @@ get.durations <- function(spikes, info.list, tz){
 
 
 get.event.counts <- function(spikes, info.list, tz){
+  # Get number of events by source, accounting for possibility to recombine events
   
+  # Get information about which events can be combined with their neighbors
   out <- get.combine.info(spikes = spikes, info.list = info.list, tz = tz)
   
+  # Parse everything out
   event.starts <- out$event.starts
   event.ends <- out$event.ends
   start.bounds <- out$start.bounds
@@ -770,59 +866,80 @@ get.event.counts <- function(spikes, info.list, tz){
   combine.start <- out$combine.start
   combine.end <- out$combine.end
   
+  # Number of samples
   n.samples <- 10000
   
+  # Get 5/95th percentile range of emission rate estimates. Will be used to normalize
+  # probability of recombining event.
   rate.range <- quantile(rate.est.all.events, probs = c(0.05, 0.95), na.rm = T)
   rate.range <- rate.range[2] - rate.range[1]
   
+  # Initialize matrix to hold event counts by source.
+  # Each row is a different realization of the Monte Carlo
   event.counts <- matrix(0, nrow = n.samples, ncol = n.s)
   colnames(event.counts) <- source.names
   
+  # Loop through number of samples
   for (z in 1:n.samples){
     
+    # t iterator tracks number of events
     continue <- T
     t <- 1
     
+    # Do until you reach last event
     while(continue){
       
+      # See how many of the following events can be recombined with event t
       max.to.combine.end <- which(!(seq(1,n.ints) %in% (which(combine.start)-t)))[1]-1
       
+      # Create sequence of possible recombine options
       end.combine.options <- seq(0, max.to.combine.end)
       
+      # Number of recombine options
       n.end.options <- length(end.combine.options)
       
+      # Initialize vector to hold similarity scores of events that can be recombined
       similarity.score <- vector(length = n.end.options)
       
+      # Similarity score calculated as described in paper
       for (i in 1:n.end.options){
         jump <- end.combine.options[i]
         similarity.score[i] <- 1 - abs(rate.est.all.events[t+jump] - rate.est.all.events[t]) / rate.range
       }
       
+      # Similarity score could be less than zero because we normalize using the 5/95
+      # range rather than min/max range, so set negative values to zero
       similarity.score <- ifelse(similarity.score < 0, 0, similarity.score)
       
+      # If a rate estimate of a given event is NA, assign equal probability of combining and
+      # not combining
       similarity.score[is.na(similarity.score)] <- 0.5
       
+      # Compute cumulative probability of combining given event with event t, based on the 
+      # probability of combining the intermediate events
       if (n.end.options > 1){
-        
         relative.probs <- cumprod(similarity.score)
-        
         for (i in seq(length(relative.probs)-1, 1)){
           relative.probs[i] <- relative.probs[i] - sum(relative.probs[seq(i+1,length(relative.probs))])
         }
-        
       } else {
         relative.probs <- 1
       }
       
-      
+      # Number to recombine. Will be different each iteration of the Monte Carlo
       n.to.combine <- sample.int(n=length(relative.probs), size = 1, prob = relative.probs)
       
+      # Get estimated source and corresponding index to save event counts
       sim.ind <- which(colnames(event.counts) == loc.est.all.events[t])
       
+      # Update event counts
       event.counts[z, sim.ind] <- event.counts[z, sim.ind] + 1
       
+      # Iterate t (which loops through naive events) by the number of events that were
+      # combined. This essentially "skips over" them
       t <- t + n.to.combine
       
+      # Once you reach the last naive event, stop while loop
       if (t > n.ints){
         continue <- F
       }

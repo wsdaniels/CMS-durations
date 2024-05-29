@@ -115,10 +115,9 @@ for (t in 1:n.ints){
 # STEP 3: PLOT EQUIPMENT-LEVEL DURATION DISTRIBUTIONS
 #---------------------------------------------------------------------------
 
-# Top plot shows distribution using proposed duration model
-# Bottom plot shows distribution using naive method 
-
-# Mean is used to create a point estimate for each event
+# Top plot shows distribution using proposed duration model.
+# Bottom plot shows distribution using naive method.
+# Mean is used to create a point estimate for each event.
 
 n.s <- length(source.names)
 
@@ -465,7 +464,6 @@ png(paste0(save.dir, '/case_study_summary.png'),
 
 par(mgp = c(1.5, 0.5, 0))
 par(mar = c(3, 1, 1, 1))
-# par(oma = c(0,0,0.5,3))
 
 layout.mat <- matrix(c(1,1,1,2,2,2), nrow = 1, byrow = T)
 layout(layout.mat)
@@ -501,12 +499,9 @@ adj <- 0.12
 right.adj <- 0.4
 
 
-
-
 plot(est.duration.means, (1:5)+adj, 
      xlim = c(0,17), ylim = c(0.8, 5.4),
      pch = pch.for.summary,
-     # pch = 19,
      col = cols.for.summary,
      bg = cols.for.summary,
      yaxt = "n", cex = 1.15, xaxt = "n",
@@ -518,7 +513,6 @@ abline(v = seq(0,16, by = 2), lty = 1, col = "gray80")
 
 points(est.duration.means, (1:5)+adj,
        pch = pch.for.summary,
-       # pch = 19,
        col = cols.for.summary,
        bg = cols.for.summary,
        cex = 1.15)
@@ -1823,27 +1817,15 @@ start.bounds <- as_datetime(start.bounds, tz = "America/New_York")
 end.bounds <-   as_datetime(end.bounds,   tz = "America/New_York")
 
 
-
-
-
-
-# possible.times <- spikes$time[!is.na(spikes$events)]
-
-
-# snapshot.time <- as_datetime('2023-09-28T5:50:00', tz = "America/New_York")
-
 under.est.factor.mean <- under.est.factor.max <- vector(length = length(event.nums))
 
 for (p in 1:length(event.nums)){
   
   print(paste0(p, "/", length(event.nums)))
   
-  # snapshot.time <- possible.times[p]
-  
   snapshot.time <- na.omit(spikes$time[spikes$events == event.nums[p]])[1]
   
   n.samples <- 100000
-  
   
   all.weights <- vector(mode = "list", length = n.ints)
   names(all.weights) <- loc.est.all.events
@@ -1968,10 +1950,6 @@ for (p in 1:length(event.nums)){
   
   mean.duration <- mean(durations.to.plot)
   max.duration <- max(durations.to.plot)
-  
-  # round(mean.duration / naive.duration, 1)
-  
-  # round(max.duration / naive.duration, 1)
   
   under.est.factor.mean[p] <- mean.duration / naive.duration
   
