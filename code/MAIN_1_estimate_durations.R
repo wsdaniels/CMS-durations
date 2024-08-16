@@ -21,24 +21,48 @@ if (commandArgs()[1] == "RStudio"){
 # START USER INPUT
 #---------------------------------------------------------------------------
 
-# Source helper files which contain functions that do most of the analysis
-source("https://raw.github.com/wsdaniels/DLQ/master/code/HELPER_spike_detection_algorithm.R")
-source("../code/helper_functions.R")
-
-# Read in simulation data.
-# Format must match output from the MAIN_1_simulate.R file, which can be found at:
-# https://github.com/wsdaniels/DLQ/
-# Example given here is for the case study in the accompanying manuscript.
-data <- readRDS('../input_data/case_study_forward_model_output.RData')
-
-# END OF USER INPUT - NO MODIFICATION NECESSARY BELOW THIS POINT
-#---------------------------------------------------------------------------
-
+# Select experiment to run:
+#   1) ADED 2022 controlled release experiment
+#   2) ADED 2023 controlled release experiment
+#   3) Stanford controlled release experiment
+#   4) AMI case study
+run.type <- 1
 
 
 
 # STEP 1: PREP DATA
 #---------------------------------------------------------------------------
+
+# Read in forward model data.
+# Format must match output from the MAIN_1_simulate.R file, which can be found at:
+# https://github.com/wsdaniels/DLQ/
+if (run.type == 1){
+  data <- readRDS('../input_data/ADED2022_forward_model_output.RData')
+} else if (run.type == 2){
+  data <- readRDS('../input_data/ADED2023_forward_model_output.RData')
+} else if (run.type == 3){
+  data <- readRDS('../input_data/Stanford_forward_model_output.RData')
+} else if (run.type == 4){
+  data <- readRDS('../input_data/case_study_forward_model_output.RData')
+}
+
+
+# Source helper files which contain functions that do most of the analysis
+# source('/Users/wdaniels/Desktop/HELPER_spike_detection_algorithm.R')
+source("https://raw.github.com/wsdaniels/DLQ/master/code/HELPER_spike_detection_algorithm.R")
+source("../code/helper_functions.R")
+
+# Where to save output
+if (run.type == 1){
+  save.dir <- paste0("../output_data/ADED2022_duration_estimates.RData")
+} else if (run.type == 2){
+  save.dir <- paste0("../output_data/ADED2023_duration_estimates.RData")
+} else if (run.type == 3){
+  save.dir <- paste0("../output_data/Stanford_duration_estimates.RData")
+} else if (run.type == 4){
+  save.dir <- "../output_data/case_study_duration_estimates_new.RData"
+}
+
 
 # Pull out sensor observations and replace NA's that are not on edge of 
 # the time series with interpolated values
@@ -57,10 +81,6 @@ sims <- data[5:length(data)]
 n.s <- length(sims) 
 source.names <- names(sims)
 
-# Define function to create a logarithmic spaced sequence (used later)
-lseq <- function(from, to, length.out) {
-  exp(seq(log(from), log(to), length.out = length.out))
-}
 
 
 
@@ -69,7 +89,7 @@ lseq <- function(from, to, length.out) {
 #---------------------------------------------------------------------------
 
 # Remove background from CMS observations
-obs <- remove.background(obs,
+obs <- remove.background(times, obs,
                          going.up.threshold = 0.25, amp.threshold = 0.75, 
                          gap.time = 30)
 
@@ -83,15 +103,13 @@ obs <- remove.background(obs,
 max.obs <- apply(obs, 1, max, na.rm = T)
 
 # Identify spikes in the max.obs time series. These are the "naive events"
-spikes <- perform.event.detection(max.obs, gap.time = 30, length.threshold = 15)
+spikes <- perform.event.detection(times, max.obs, gap.time = 30, length.threshold = 15)
 
 # Pull event "event numbers" that uniquely identify each naive event
 event.nums <- na.omit(unique(spikes$events))
 
 # Number of naive events
 n.ints <- length(event.nums)
-
-
 
 
 # STEP 4: CREATE LOCALIZATION AND QUANTIFICATION ESTIMATES FOR EACH NAIVE EVENT
@@ -101,7 +119,7 @@ n.ints <- length(event.nums)
 loc.est.all.events <- perform.localization(spikes, obs, sims)
 
 # Estimate emission rate for each naive event
-all.q.vals <- perform.quantification(spikes, obs, sims, loc.est.all.events, print.report = T)
+all.q.vals <- perform.quantification(times, spikes, obs, sims, loc.est.all.events, print.report = T)
 
 # Grab emission rate point estimate and 90% interval for each naive event from the MC output
 rate.est.all.events <- sapply(all.q.vals, mean, na.rm = T)
@@ -114,10 +132,10 @@ error.upper.all.events <- sapply(all.q.vals, function(X) quantile(X, probs = 0.9
 #---------------------------------------------------------------------------
 
 # Scale simulations by the estimated emission rate for each naive event
-sims <- scale.sims(sims)
+sims <- scale.sims(times, sims, spikes, loc.est.all.events, rate.est.all.events)
 
 # Create information mask based on simulated concentrations
-info.list <- create.info.mask(sims)
+info.list <- create.info.mask(times, sims, gap.time = 0, length.threshold = 15)
 
 
 
@@ -126,7 +144,7 @@ info.list <- create.info.mask(sims)
 #---------------------------------------------------------------------------
 
 # Estimate durations. "out" contains a number of different fields (see below).
-out <- get.durations(spikes = spikes, info.list = info.list, tz = "America/New_York")
+out <- get.durations(spikes = spikes, info.list = info.list, loc.est.all.events, rate.est.all.events, tz = "America/New_York")
 
 # Grab distribution of possible durations for each naive event
 all.durations <- out$all.durations
@@ -145,6 +163,10 @@ start.bounds <- out$start.bounds
 
 # Grab latest possible end time for each naive event. The "end bounds"
 end.bounds <- out$end.bounds
+
+start.similarity.scores <- out$start.similarity.scores
+
+end.similarity.scores <- out$end.similarity.scores
 
 # Calculate naive event durations
 original.durations <- as.numeric(difftime(event.ends, event.starts, units = "hours"))
@@ -172,7 +194,7 @@ est.max.interval <- sapply(est.durations, function(X) quantile(X, probs = 0.95))
 #---------------------------------------------------------------------------
 
 # Get distribution of possible event counts for each equipment group
-event.counts <- get.event.counts(spikes = spikes, info.list = info.list, tz = "America/Denver")
+event.counts <- get.event.counts(spikes = spikes, info.list = info.list, loc.est.all.events, rate.est.all.events, tz = "America/Denver")
 
 # Compute total time of experiment window
 total.time <- as.numeric(difftime(range(times)[2], range(times)[1], units = "days"))
@@ -185,8 +207,6 @@ freq.mean <- apply(num.events.per.year, 2, mean)
 freq.int <- apply(num.events.per.year, 2, function(X) quantile(X, probs = c(0.05, 0.95)))
 frequency.results <- rbind(freq.mean, freq.int[1,], freq.int[2,])
 print(t(round(frequency.results, 0))) # number of events per year
-
-
 
 
 
@@ -205,9 +225,9 @@ duration.out <- list(all.durations = all.durations,
                      error.lower.all.events = error.lower.all.events,
                      error.upper.all.events = error.upper.all.events,
                      loc.est.all.events = loc.est.all.events,
-                     source.names = source.names)
+                     source.names = source.names,
+                     start.similarity.scores = start.similarity.scores,
+                     end.similarity.scores = end.similarity.scores)
 
-saveRDS(duration.out, file = "../output_data/case_study_duration_estimates.RData")
-
-
+saveRDS(duration.out, file = save.dir)
 

@@ -1,5 +1,279 @@
+# Define function to create a logarithmic spaced sequence (used later)
+lseq <- function(from, to, length.out) {
+  exp(seq(log(from), log(to), length.out = length.out))
+}
 
-remove.background <- function(obs, going.up.threshold, amp.threshold, gap.time){
+
+get.sensor.arrangement <- function(run.type, which.arrangement, data, z){
+  
+  # Sensor arrangements for ADED 2022
+  if (run.type == 1){
+    
+    if (which.arrangement == "best"){
+      
+      if (z == 1){
+        sensors.to.use <- c("NW")
+      } else if (z == 2){
+        sensors.to.use <- c("NW", "SE")
+      } else if (z == 3){
+        sensors.to.use <- c("N", "SE",  "W" )
+      } else if (z == 4){
+        sensors.to.use <- c("E",  "N",  "SE", "W" )
+      } else if (z == 5){
+        sensors.to.use <- c("E",  "N",  "NW", "SE", "W" )
+      } else if (z == 6){
+        sensors.to.use <- c("E",  "N",  "NW", "SE", "SW", "W" )
+      } else if (z == 7){
+        sensors.to.use <- c("E",  "N",  "NE", "NW", "SE", "SW", "W" )
+      } else if (z == 8){
+        sensors.to.use <- c("E",  "N",  "NE", "NW", "S",  "SE", "SW", "W" )
+      }  
+      
+    } else if (which.arrangement == "median"){
+      
+      if (z == 1){
+        sensors.to.use <- c('N')
+      } else if (z == 2){
+        sensors.to.use <- c('N', 'S')
+      } else if (z == 3){
+        sensors.to.use <- c('E', 'NE', 'W')
+      } else if (z == 4){
+        sensors.to.use <- c('N', 'NE', 'NW', 'SE')
+      } else if (z == 5){
+        sensors.to.use <- c('E', 'N', 'NE', 'NW', 'SE')
+      } else if (z == 6){
+        sensors.to.use <- c('E', 'N', 'NE', 'NW', 'SE', 'SW')
+      } else if (z == 7){
+        sensors.to.use <- c('E', 'N', 'NE', 'S', 'SE', 'SW', 'W')
+      } else if (z == 8){
+        sensors.to.use <- c('E', 'N', 'NE', 'NW', 'S', 'SE', 'SW', 'W')
+      }  
+      
+    } else if (which.arrangement == "mean"){
+      
+      if (z == 1){
+        sensors.to.use <- c('E')
+      } else if (z == 2){
+        sensors.to.use <- c('NE', 'NW')
+      } else if (z == 3){
+        sensors.to.use <- c('E', 'N', 'S')
+      } else if (z == 4){
+        sensors.to.use <- c('E', 'N', 'NE', 'W')
+      } else if (z == 5){
+        sensors.to.use <- c('E', 'N', 'NW', 'S', 'SW')
+      } else if (z == 6){
+        sensors.to.use <- c('E', 'N', 'NW', 'S', 'SE', 'SW')
+      } else if (z == 7){
+        sensors.to.use <- c('E', 'N', 'NE', 'NW', 'S', 'SW', 'W')
+      } else if (z == 8){
+        sensors.to.use <- c('E', 'N', 'NE', 'NW', 'S', 'SE', 'SW', 'W')
+      }  
+      
+    } else if (which.arrangement == "worst"){
+      
+      if (z == 1){
+        sensors.to.use <- c('NE')
+      } else if (z == 2){
+        sensors.to.use <- c('N', 'NE')
+      } else if (z == 3){
+        sensors.to.use <- c('NE', 'S', 'SW')
+      } else if (z == 4){
+        sensors.to.use <- c('N', 'NE', 'S', 'SW')
+      } else if (z == 5){
+        sensors.to.use <- c('E', 'NE', 'S', 'SE', 'SW')
+      } else if (z == 6){
+        sensors.to.use <- c('E', 'N', 'NE', 'S', 'SE', 'SW')
+      } else if (z == 7){
+        sensors.to.use <- c('E', 'N', 'NE', 'NW', 'S', 'SE', 'SW')
+      } else if (z == 8){
+        sensors.to.use <- c('E', 'N', 'NE', 'NW', 'S', 'SE', 'SW', 'W')
+      }  
+      
+    }
+    
+    # Sensor arrangements for ADED 2023
+  } else if (run.type == 2){
+    
+    if (which.arrangement == "best"){
+      
+      if (z == 1){
+        sensors.to.use <- c('N')
+      } else if (z == 2){
+        sensors.to.use <- c('N', 'SW')
+      } else if (z == 3){
+        sensors.to.use <- c('ENE', 'NW', 'SW')
+      } else if (z == 4){
+        sensors.to.use <- c('ESE', 'N', 'SW', 'WNW')
+      } else if (z == 5){
+        sensors.to.use <- c('ENE', 'N', 'SE', 'SW', 'WNW')
+      } else if (z == 6){
+        sensors.to.use <- c('ENE', 'N', 'S', 'SE', 'SW', 'WNW')
+      } else if (z == 7){
+        sensors.to.use <- c('ENE', 'N', 'NW', 'S', 'SE', 'SW', 'WNW')
+      } else if (z == 8){
+        sensors.to.use <- c('ENE', 'N', 'NE', 'NW', 'S', 'SE', 'SW', 'WNW')
+      } else if (z == 9){
+        sensors.to.use <- c('ENE', 'ESE', 'N', 'NE', 'NW', 'S', 'SE', 'SW', 'WNW')
+      } else if (z == 10){
+        sensors.to.use <- c('ENE', 'ESE', 'N', 'NE', 'NW', 'S', 'SE', 'SW', 'WNW', 'WSW')
+      }
+      
+    } else if (which.arrangement == "median"){
+      
+      if (z == 1){
+        sensors.to.use <- c('NE')
+      } else if (z == 2){
+        sensors.to.use <- c('S', 'SE')
+      } else if (z == 3){
+        sensors.to.use <- c('ESE', 'N', 'NE')
+      } else if (z == 4){
+        sensors.to.use <- c('N', 'NE', 'SW', 'WSW')
+      } else if (z == 5){
+        sensors.to.use <- c('N', 'NE', 'S', 'SW', 'WSW')
+      } else if (z == 6){
+        sensors.to.use <- c('ENE', 'ESE', 'NW', 'S', 'SE', 'WNW')
+      } else if (z == 7){
+        sensors.to.use <- c('ESE', 'NE', 'S', 'SE', 'SW', 'WNW', 'WSW')
+      } else if (z == 8){
+        sensors.to.use <- c('ENE', 'ESE', 'NW', 'S', 'SE', 'SW', 'WNW', 'WSW')
+      } else if (z == 9){
+        sensors.to.use <- c('ENE', 'ESE', 'N', 'NE', 'NW', 'SE', 'SW', 'WNW', 'WSW')
+      } else if (z == 10){
+        sensors.to.use <- c('ENE', 'ESE', 'N', 'NE', 'NW', 'S', 'SE', 'SW', 'WNW', 'WSW')
+      }
+      
+      
+    } else if (which.arrangement == "mean"){
+      
+      if (z == 1){
+        sensors.to.use <- c('NE')
+      } else if (z == 2){
+        sensors.to.use <- c('ENE', 'SE')
+      } else if (z == 3){
+        sensors.to.use <- c('ENE', 'NE', 'S')
+      } else if (z == 4){
+        sensors.to.use <- c('ESE', 'SW', 'WNW', 'WSW')
+      } else if (z == 5){
+        sensors.to.use <- c('ENE', 'NE', 'NW', 'S', 'WNW')
+      } else if (z == 6){
+        sensors.to.use <- c('ENE', 'N', 'NE', 'SW', 'WNW', 'WSW')
+      } else if (z == 7){
+        sensors.to.use <- c('ENE', 'ESE', 'N', 'NE', 'S', 'SE', 'WNW')
+      } else if (z == 8){
+        sensors.to.use <- c('ESE', 'NE', 'NW', 'S', 'SE', 'SW', 'WNW', 'WSW')
+      } else if (z == 9){
+        sensors.to.use <- c('ENE', 'ESE', 'N', 'NE', 'NW', 'SE', 'SW', 'WNW', 'WSW')
+      } else if (z == 10){
+        sensors.to.use <- c('ENE', 'ESE', 'N', 'NE', 'NW', 'S', 'SE', 'SW', 'WNW', 'WSW')
+      }
+      
+    } else if (which.arrangement == "worst"){
+      
+      if (z == 1){
+        sensors.to.use <- c('WSW')
+      } else if (z == 2){
+        sensors.to.use <- c('WNW', 'WSW')
+      } else if (z == 3){
+        sensors.to.use <- c('NW', 'WNW', 'WSW')
+      } else if (z == 4){
+        sensors.to.use <- c('N', 'NW', 'WNW', 'WSW')
+      } else if (z == 5){
+        sensors.to.use <- c('N', 'NE', 'NW', 'WNW', 'WSW')
+      } else if (z == 6){
+        sensors.to.use <- c('ENE', 'N', 'NE', 'NW', 'WNW', 'WSW')
+      } else if (z == 7){
+        sensors.to.use <- c('ENE', 'ESE', 'N', 'NE', 'NW', 'WNW', 'WSW')
+      } else if (z == 8){
+        sensors.to.use <- c('ENE', 'ESE', 'N', 'NE', 'NW', 'S', 'WNW', 'WSW')
+      } else if (z == 9){
+        sensors.to.use <- c('ENE', 'ESE', 'N', 'NE', 'NW', 'S', 'SE', 'WNW', 'WSW')
+      } else if (z == 10){
+        sensors.to.use <- c('ENE', 'ESE', 'N', 'NE', 'NW', 'S', 'SE', 'SW', 'WNW', 'WSW')
+      }
+      
+    }
+    
+    # Sensor arrangements for Stanford releases
+  } else if (run.type == 3){
+    
+    if (which.arrangement == "best"){
+      
+      if (z == 1){
+        sensors.to.use <- c('2908')
+      } else if (z == 2){
+        sensors.to.use <- c('2907', '2908')
+      } else if (z == 3){
+        sensors.to.use <- c('2907', '2908', '2909')
+      } else if (z == 4){
+        sensors.to.use <- c('2906', '2907', '2908', '2909')
+      } else if (z == 5){
+        sensors.to.use <- c('2906', '2907', '2908', '2909', '2910')
+      } else if (z == 6){
+        sensors.to.use <- c('2906', '2907', '2908', '2909', '2910', '2911')
+      }
+      
+    } else if (which.arrangement == "median"){
+      
+      if (z == 1){
+        sensors.to.use <- c('2910')
+      } else if (z == 2){
+        sensors.to.use <- c('2910', '2911')
+      } else if (z == 3){
+        sensors.to.use <- c('2909', '2910', '2911')
+      } else if (z == 4){
+        sensors.to.use <- c('2906', '2908', '2910', '2911')
+      } else if (z == 5){
+        sensors.to.use <- c('2907', '2908', '2909', '2910', '2911')
+      } else if (z == 6){
+        sensors.to.use <- c('2906', '2907', '2908', '2909', '2910', '2911')
+      }
+      
+    } else if (which.arrangement == "mean"){
+      
+      if (z == 1){
+        sensors.to.use <- c('2909')
+      } else if (z == 2){
+        sensors.to.use <- c('2906', '2908')
+      } else if (z == 3){
+        sensors.to.use <- c('2906', '2908', '2910')
+      } else if (z == 4){
+        sensors.to.use <- c('2907', '2908', '2910', '2911')
+      } else if (z == 5){
+        sensors.to.use <- c('2907', '2908', '2909', '2910', '2911')
+      } else if (z == 6){
+        sensors.to.use <- c('2906', '2907', '2908', '2909', '2910', '2911')
+      }
+      
+    } else if (which.arrangement == "worst"){
+      
+      if (z == 1){
+        sensors.to.use <- c('2906')
+      } else if (z == 2){
+        sensors.to.use <- c('2906', '2910')
+      } else if (z == 3){
+        sensors.to.use <- c('2906', '2907', '2910')
+      } else if (z == 4){
+        sensors.to.use <- c('2906', '2907', '2910', '2911')
+      } else if (z == 5){
+        sensors.to.use <- c('2906', '2907', '2909', '2910', '2911')
+      } else if (z == 6){
+        sensors.to.use <- c('2906', '2907', '2908', '2909', '2910', '2911')
+      }
+      
+    }
+    
+    # Sensor arrangements for AMI case study
+  } else if (run.type == 4){
+    
+    sensors.to.use <- colnames(data$obs)
+  }
+  
+  return(sensors.to.use)
+  
+}
+
+
+remove.background <- function(times, obs, going.up.threshold, amp.threshold, gap.time){
   # Removes background from concentration time series
   # obs: matrix with columns representing the different CMS sensors and
   #      rows representing the time steps
@@ -117,7 +391,7 @@ remove.background <- function(obs, going.up.threshold, amp.threshold, gap.time){
 }
 
 
-perform.event.detection <- function(max.obs, gap.time, length.threshold){
+perform.event.detection <- function(times, max.obs, gap.time, length.threshold){
   # Creates the naive emission durations that do not account for CMS non-detect times
   
   # Create data frame with time steps and event mask
@@ -193,10 +467,19 @@ perform.event.detection <- function(max.obs, gap.time, length.threshold){
 
 
 
-
-
 perform.localization <- function(spikes, obs, sims){
   # Estimates emission source for each naive event
+  
+  source.names <- names(sims)
+  
+  # Pull event "event numbers" that uniquely identify each naive event
+  event.nums <- na.omit(unique(spikes$events))
+  
+  # Number of naive events
+  n.ints <- length(event.nums)
+  
+  n.s <- length(sims)
+  n.r <- ncol(obs)
   
   # Matrix to hold alignment metric for each event and potential source
   metrics <- matrix(NA, nrow = n.ints, ncol = n.s)
@@ -278,8 +561,17 @@ perform.localization <- function(spikes, obs, sims){
 
 
 
-perform.quantification <- function(spikes, obs, sims, loc.est.all.events, print.report = F){
+perform.quantification <- function(times, spikes, obs, sims, loc.est.all.events, print.report = F){
   # Estimates emission rate for each naive event
+  
+  # Pull event "event numbers" that uniquely identify each naive event
+  event.nums <- na.omit(unique(spikes$events))
+  
+  # Number of naive events
+  n.ints <- length(event.nums)
+  
+  n.r <- ncol(obs)
+  source.names <- names(sims)
   
   # Vectors to hold localization and quantification results
   all.q.vals <- vector(mode = "list", length = n.ints)
@@ -386,10 +678,6 @@ perform.quantification <- function(spikes, obs, sims, loc.est.all.events, print.
       # If there are not enough time steps in which both observations and
       # predictions are in a spike, then do not estimate a rate
     } else {
-      # rate.est.all.events[t]    <- NA
-      # error.lower.all.events[t] <- NA
-      # error.upper.all.events[t] <- NA
-      
       all.q.vals[[t]] <- NA
     }
     
@@ -402,9 +690,15 @@ perform.quantification <- function(spikes, obs, sims, loc.est.all.events, print.
 }
 
 
-scale.sims <- function(sims){
+scale.sims <- function(times, sims, spikes, loc.est.all.events, rate.est.all.events){
   # Scales simulated concentrations by the estimated emission rate of the nearest 
   # naive event
+  
+  # Pull event "event numbers" that uniquely identify each naive event
+  event.nums <- na.omit(unique(spikes$events))
+  
+  # Number of naive events
+  n.ints <- length(event.nums)
   
   # Loop through naive events
   for (t in 1:n.ints){
@@ -460,7 +754,7 @@ scale.sims <- function(sims){
 }
 
 
-create.info.mask <- function(sims, gap.time = 0, length.threshold = 15){
+create.info.mask <- function(times, sims, gap.time = 0, length.threshold = 15){
   # Determines which time periods have information from the CMS sensors and 
   # which do not.
   
@@ -471,11 +765,11 @@ create.info.mask <- function(sims, gap.time = 0, length.threshold = 15){
   # Loop through potential emission sources
   for (i in 1:length(sims)){
     
-    # Get foward simulation for source i
+    # Get forward simulation for source i
     this.sim <- sims[[i]]
     
     # Filter out small spikes from simulations less than 0.75 kg/hr
-    bgr.sim <- remove.background(this.sim,
+    bgr.sim <- remove.background(times, this.sim, 
                                  going.up.threshold = 0.25, amp.threshold = 0.75,
                                  gap.time = gap.time)
     
@@ -483,7 +777,7 @@ create.info.mask <- function(sims, gap.time = 0, length.threshold = 15){
     max.bgr.sim <- apply(bgr.sim, 1, max, na.rm = T)
     
     # Cluster spikes using event detection algorithm to create periods of information
-    info.list[[i]] <- perform.event.detection(max.bgr.sim, gap.time = gap.time, length.threshold = length.threshold)
+    info.list[[i]] <- perform.event.detection(times, max.bgr.sim, gap.time = gap.time, length.threshold = length.threshold)
     
   }
   
@@ -494,8 +788,14 @@ create.info.mask <- function(sims, gap.time = 0, length.threshold = 15){
 
 
 
-get.combine.info <- function(spikes, info.list, tz){
+get.combine.info <- function(spikes, info.list, loc.est.all.events, tz){
   # Figure out which naive events have non-zero probability of being combined with their neighbors
+  
+  # Pull event "event numbers" that uniquely identify each naive event
+  event.nums <- na.omit(unique(spikes$events))
+  
+  # Number of naive events
+  n.ints <- length(event.nums)
   
   # Initialize variables
   start.bounds <- event.starts <- end.bounds <- event.ends <- 
@@ -666,11 +966,13 @@ get.combine.info <- function(spikes, info.list, tz){
 
 
 
-get.durations <- function(spikes, info.list, tz){
+get.durations <- function(spikes, info.list, loc.est.all.events, rate.est.all.events, tz){
   # Get distribution of possible durations for a given naive event
   
+  source.names <- names(info.list)
+  
   # Get information about which events can be combined with their neighbors
-  out <- get.combine.info(spikes = spikes, info.list = info.list, tz = tz)
+  out <- get.combine.info(spikes = spikes, info.list = info.list, loc.est.all.events, tz = tz)
   
   # Parse out info
   event.starts <- out$event.starts
@@ -682,6 +984,9 @@ get.durations <- function(spikes, info.list, tz){
   
   # Number of start and end time samples
   n.samples <- 100000
+  
+  n.ints <- length(loc.est.all.events)
+  n.s <- length(source.names)
   
   # Initialize variable to hold all sampled durations
   all.durations <- vector(mode = "list", length = n.ints)
@@ -700,6 +1005,8 @@ get.durations <- function(spikes, info.list, tz){
   # probability of recombining event.
   rate.range <- quantile(rate.est.all.events, probs = c(0.05, 0.95), na.rm = T)
   rate.range <- rate.range[2] - rate.range[1]
+  
+  start.similarity.scores <- end.similarity.scores <- vector(mode = "list", length = n.ints)
   
   # Loop through events
   for (t in 1:n.ints){
@@ -757,6 +1064,8 @@ get.durations <- function(spikes, info.list, tz){
     # not combining
     similarity.score[is.na(similarity.score)] <- 0.5
     
+    start.similarity.scores[[t]] <- similarity.score
+    
     # Compute cumulative probability of combining given event with event t, based on the 
     # probability of combining the intermediate events
     if (n.start.options > 1){
@@ -799,6 +1108,8 @@ get.durations <- function(spikes, info.list, tz){
     # not combining
     similarity.score[is.na(similarity.score)] <- 0.5
     
+    end.similarity.scores[[t]] <- similarity.score
+    
     # Compute cumulative probability of combining given event with event t, based on the 
     # probability of combining the intermediate events
     if (n.end.options > 1){
@@ -839,7 +1150,9 @@ get.durations <- function(spikes, info.list, tz){
               event.ends = event.ends,
               start.bounds = start.bounds,
               end.bounds = end.bounds,
-              hard.stops = hard.stops)
+              hard.stops = hard.stops,
+              start.similarity.scores = start.similarity.scores,
+              end.similarity.scores = end.similarity.scores)
   
   return(out)
   
@@ -852,11 +1165,13 @@ get.durations <- function(spikes, info.list, tz){
 
 
 
-get.event.counts <- function(spikes, info.list, tz){
+get.event.counts <- function(spikes, info.list, loc.est.all.events, rate.est.all.events, tz){
   # Get number of events by source, accounting for possibility to recombine events
   
+  source.names <- names(info.list)
+  
   # Get information about which events can be combined with their neighbors
-  out <- get.combine.info(spikes = spikes, info.list = info.list, tz = tz)
+  out <- get.combine.info(spikes = spikes, info.list = info.list, loc.est.all.events, tz = tz)
   
   # Parse everything out
   event.starts <- out$event.starts
@@ -869,6 +1184,8 @@ get.event.counts <- function(spikes, info.list, tz){
   # Number of samples
   n.samples <- 10000
   
+  n.s <- length(info.list)
+  
   # Get 5/95th percentile range of emission rate estimates. Will be used to normalize
   # probability of recombining event.
   rate.range <- quantile(rate.est.all.events, probs = c(0.05, 0.95), na.rm = T)
@@ -878,6 +1195,8 @@ get.event.counts <- function(spikes, info.list, tz){
   # Each row is a different realization of the Monte Carlo
   event.counts <- matrix(0, nrow = n.samples, ncol = n.s)
   colnames(event.counts) <- source.names
+  
+  n.ints <- length(loc.est.all.events)
   
   # Loop through number of samples
   for (z in 1:n.samples){
