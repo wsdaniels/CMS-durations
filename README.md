@@ -6,3 +6,4 @@ The "MAIN_1_estimate_durations" file takes simulated concentration data and conc
 
 The "output_data" directory is where output from the MAIN_1 script is saved. Output files have been pre-generated and are saved in this directory.
 
+The accompanying paper can be found here: https://doi.org/10.1021/acs.estlett.4c00687
