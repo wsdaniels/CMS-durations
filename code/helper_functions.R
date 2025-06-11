@@ -272,7 +272,6 @@ get.sensor.arrangement <- function(run.type, which.arrangement, data, z){
   
 }
 
-
 remove.background <- function(times, obs, going.up.threshold, amp.threshold, gap.time){
   # Removes background from concentration time series
   # obs: matrix with columns representing the different CMS sensors and

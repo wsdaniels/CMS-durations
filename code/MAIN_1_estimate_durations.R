@@ -26,7 +26,7 @@ if (commandArgs()[1] == "RStudio"){
 #   2) ADED 2023 controlled release experiment
 #   3) Stanford controlled release experiment
 #   4) AMI case study
-run.type <- 1
+run.type <- 2
 
 
 
