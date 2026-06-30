@@ -30,7 +30,7 @@ pd.to.fd <- function(pd){
 #   1) ADED 2022
 #   2) ADED 2023
 #   3) Stanford
-run.type <- 3
+run.type <- 2
 
 
 # END OF USER INPUT - NO MODIFICATION NECESSARY BELOW THIS POINT

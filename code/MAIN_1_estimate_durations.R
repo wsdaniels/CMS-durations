@@ -26,7 +26,7 @@ if (commandArgs()[1] == "RStudio"){
 #   2) ADED 2023 controlled release experiment
 #   3) Stanford controlled release experiment
 #   4) AMI case study
-run.type <- 2
+run.type <- 4
 
 
 
@@ -37,13 +37,13 @@ run.type <- 2
 # Format must match output from the MAIN_1_simulate.R file, which can be found at:
 # https://github.com/wsdaniels/DLQ/
 if (run.type == 1){
-  data <- readRDS('../input_data/ADED2022_forward_model_output.RData')
+  data <- readRDS('../input_data/ADED2022_forward_model_output_SAMPLE.RData')
 } else if (run.type == 2){
-  data <- readRDS('../input_data/ADED2023_forward_model_output.RData')
+  data <- readRDS('../input_data/ADED2023_forward_model_output_SAMPLE.RData')
 } else if (run.type == 3){
-  data <- readRDS('../input_data/Stanford_forward_model_output.RData')
+  data <- readRDS('../input_data/Stanford_forward_model_output_SAMPLE.RData')
 } else if (run.type == 4){
-  data <- readRDS('../input_data/case_study_forward_model_output.RData')
+  data <- readRDS('../input_data/case_study_forward_model_output_SAMPLE.RData')
 }
 
 
@@ -54,13 +54,13 @@ source("../code/helper_functions.R")
 
 # Where to save output
 if (run.type == 1){
-  save.dir <- paste0("../output_data/ADED2022_duration_estimates.RData")
+  save.dir <- paste0("../output_data/ADED2022_duration_estimates_SAMPLE.RData")
 } else if (run.type == 2){
-  save.dir <- paste0("../output_data/ADED2023_duration_estimates.RData")
+  save.dir <- paste0("../output_data/ADED2023_duration_estimates_SAMPLE.RData")
 } else if (run.type == 3){
-  save.dir <- paste0("../output_data/Stanford_duration_estimates.RData")
+  save.dir <- paste0("../output_data/Stanford_duration_estimates_SAMPLE.RData")
 } else if (run.type == 4){
-  save.dir <- "../output_data/case_study_duration_estimates_new.RData"
+  save.dir <- "../output_data/case_study_duration_estimates_SAMPLE.RData"
 }
 
 
